@@ -1,0 +1,5 @@
+*list out directory contnets
+*list out create date and time
+*owner/group
+*size of file
+*permissions
