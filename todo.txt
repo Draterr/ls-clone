@@ -1,5 +1,6 @@
-*list out directory contnets
+*list out directory contents / 
 *list out create date and time
 *owner/group
 *size of file
 *permissions
+*parse args
