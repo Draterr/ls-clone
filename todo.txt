@@ -1,6 +1,7 @@
 *list out directory contents / 
+*parse args
 *list out create date and time
 *owner/group
 *size of file
 *permissions
-*parse args
+*color coding
