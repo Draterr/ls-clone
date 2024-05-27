@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 #define UPPER_SIZE 4294967295
 #define ANSI_COLOR_GREEN "\e[0;32m"
@@ -16,6 +17,9 @@ struct file{
 
 int actual_number_files;
 int debug = 0;
+int col_size;
+size_t longest_filename = 0;
+
 
 struct file *populate_struct(struct dirent *dir_struct,DIR *dir){ 
 	int i = 0;
@@ -28,6 +32,9 @@ struct file *populate_struct(struct dirent *dir_struct,DIR *dir){
 	struct_buf = sizeof(struct file) * word_limit;
 	while((dir_struct = readdir(dir)) != NULL){
 		char *file_name = dir_struct->d_name;
+		if(strlen(file_name) > longest_filename){
+			longest_filename = strlen(file_name);
+		}
 		if (i >= word_limit){
 			if (struct_buf >= UPPER_SIZE){
 				printf("Reached maxium amount of memory allowed\nexiting...");
@@ -96,29 +103,58 @@ char *parse_args(int argc,char *argv[]){
 	return args;
 }
 
-void display_result(int len,struct file *file_properties,int mode,char *current_directory){//mode(1) = row display, mode(2) = column display
+void sort_name(struct file *file_properties){
 	int i;
-	if(mode != 1){
-		printf("%s:\n",current_directory);
-		printf("total: %d\n",actual_number_files);
+	int j;
+	char *smallest;
+	for(j=0;j<actual_number_files;j++){
+		char *tmp;
+		for(i=0;i<actual_number_files - j - 1;i++){
+			if(file_properties[i].name[0] > file_properties[i+1].name[0]){
+				tmp = file_properties[i+1].name;
+				file_properties[i+1].name = file_properties[i].name;
+				file_properties[i].name = tmp;
+			}
+		}
 	}
-	for(i=0;i < actual_number_files;i++){
+	for(j=0;j<actual_number_files;j++){
+		printf("sorted output: %s\n",file_properties[j].name);
+	}
+}
+
+void display_result(int len,struct file *file_properties,int mode,char *current_directory,int col_size){//mode(1) = row display, mode(2) = column display
+	int i;
+	size_t current_len;
+	int tmp_col;
+	tmp_col = col_size;
+	int col_len = 0;
+	for(i=0;i<actual_number_files;i++){
+		current_len = strlen(file_properties[i].name);
 		switch(mode) {
 			case 1:
 				if(file_properties[i].name[0] == '.'){
 					continue;
 				}
-				if(i == actual_number_files - 1){
-					printf("%s\n",file_properties[i].name);
-				}
-				else{
-					printf("%s ",file_properties[i].name);
-				}
-				break;
+					if(longest_filename < tmp_col){
+						printf("%-*s  ",(int)longest_filename,file_properties[i].name);
+						if(i == actual_number_files - 1){
+							printf("\n");
+						}
+						tmp_col = tmp_col - longest_filename;
+
+					}
+					else if(longest_filename > tmp_col){
+						tmp_col = col_size;
+						printf("\n");
+						printf("%-*s  ",(int)longest_filename,file_properties[i].name);
+						tmp_col = tmp_col - longest_filename;
+					}
+				break;	
 			case 2:
 				printf("%s\n",file_properties[i].name);
-				break;
+				break;	
 		}
+				
 	}
 }
 
@@ -126,15 +162,12 @@ void pop_struct_then_display(DIR *dir,int mode,char *current_directory){
 	struct dirent *dir_struct;
 	struct file *file_properties;
 	file_properties = populate_struct(dir_struct, dir);
-	display_result(actual_number_files, file_properties, mode,current_directory);
+	sort_name(file_properties);
+	display_result(actual_number_files, file_properties, mode,current_directory,col_size);
 	free_struct_mem(file_properties, actual_number_files);
 	free(file_properties);
 }
 int main(int argc, char*argv[]){
-	if(argc < 2){
-		printf("invalid number of arguments\n");
-		exit(1);
-	}
 	struct dirent *dir_struct;
 	char *args;
 	int display_mode = 1;
@@ -152,17 +185,21 @@ int main(int argc, char*argv[]){
 		}
 		i++;
 	}
+	if(isatty(1)){
+		struct winsize sizes;
+		int status = ioctl(1, TIOCGWINSZ, &sizes);
+		if(status == 0){
+			col_size = sizes.ws_col;
+	}
 	char directory[4095];
 	int stat_result;
+	int has_dir_arg = 0;
 	struct stat stats;
 	for(j=0;j < argc;j++){
 		stat_result = stat(argv[j],&stats);
-		if(stat_result == -1){
-			perror("stat");
-			exit(-1);
-		}
 		if(S_ISDIR(stats.st_mode)){
-			strcpy(directory, argv[j]);
+			has_dir_arg = 1;
+			strncpy(directory, argv[j],4095);
 			DIR *dir = opendir(directory);
 			if (!dir){
 				perror("opendir");
@@ -172,8 +209,17 @@ int main(int argc, char*argv[]){
 			closedir(dir);
 		}
 	}
+	if(has_dir_arg == 0){
+		strncpy(directory, ".",4095);
+		DIR *dir = opendir(directory);
+		if (!dir){
+			perror("opendir");
+			exit(1);
+		}
+		pop_struct_then_display(dir, display_mode,directory);
+		closedir(dir);
+		}
 	free(args);
 	return 0;
 }
-
-
+}

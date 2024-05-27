@@ -5,3 +5,4 @@
 *size of file
 *permissions
 *color coding
+*sort output(make . and .. the top results)
