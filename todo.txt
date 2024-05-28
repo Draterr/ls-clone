@@ -1,8 +1,0 @@
-*list out directory contents / 
-*parse args
-*list out create date and time
-*owner/group
-*size of file
-*permissions
-*color coding
-*sort output(make . and .. the top results)
