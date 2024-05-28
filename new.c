@@ -103,23 +103,20 @@ char *parse_args(int argc,char *argv[]){
 	return args;
 }
 
-void sort_name(struct file *file_properties){
+struct file* sort_name(struct file *file_properties){
 	int i;
 	int j;
-	char *smallest;
 	for(j=0;j<actual_number_files;j++){
 		char *tmp;
 		for(i=0;i<actual_number_files - j - 1;i++){
-			if(file_properties[i].name[0] > file_properties[i+1].name[0]){
-				tmp = file_properties[i+1].name;
-				file_properties[i+1].name = file_properties[i].name;
-				file_properties[i].name = tmp;
+			if(strcmp(file_properties[i].name,file_properties[i+1].name) > 0){
+				tmp = file_properties[i].name;
+				file_properties[i].name = file_properties[i+1].name;
+				file_properties[i+1].name = tmp;
 			}
 		}
 	}
-	for(j=0;j<actual_number_files;j++){
-		printf("sorted output: %s\n",file_properties[j].name);
-	}
+	return file_properties;
 }
 
 void display_result(int len,struct file *file_properties,int mode,char *current_directory,int col_size){//mode(1) = row display, mode(2) = column display
@@ -151,6 +148,12 @@ void display_result(int len,struct file *file_properties,int mode,char *current_
 					}
 				break;	
 			case 2:
+				if(file_properties[i].name[0] == '.'){
+					continue;
+				}
+				printf("%s\n",file_properties[i].name);
+				break;	
+			case 3:
 				printf("%s\n",file_properties[i].name);
 				break;	
 		}
@@ -162,7 +165,7 @@ void pop_struct_then_display(DIR *dir,int mode,char *current_directory){
 	struct dirent *dir_struct;
 	struct file *file_properties;
 	file_properties = populate_struct(dir_struct, dir);
-	sort_name(file_properties);
+	file_properties = sort_name(file_properties);
 	display_result(actual_number_files, file_properties, mode,current_directory,col_size);
 	free_struct_mem(file_properties, actual_number_files);
 	free(file_properties);
@@ -181,6 +184,9 @@ int main(int argc, char*argv[]){
 		switch (args[i]) {
 			case 'l':
 				display_mode = 2;
+				break;
+			case 'a':
+				display_mode = 3;
 				break;
 		}
 		i++;
