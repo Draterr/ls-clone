@@ -24,18 +24,18 @@
 #define ANSI_BACKGROUND_YELLOW "\e[43m"
 
 
-int actual_number_files;
-int debug = 0;
-int col_size;
-size_t longest_filename = 0;
-size_t longest_filesize = 0;
-size_t longest_username = 0;
-size_t longest_group = 0;
-size_t longest_month = 0;
-size_t longest_hardlink = 0;
-unsigned int blocks;
+int actual_number_files; //get the number of files for the current struct
+int debug = 0; // set debug information
+int col_size; // the number of columns for the current terminal
+size_t longest_filename = 0; //the longest filename which we have to assign the column width to
+size_t longest_filesize = 0; //the longest file_size which we have to assign the column width to
+size_t longest_username = 0; //the longest username which we have to assign the column width to
+size_t longest_group = 0; //the longest group which we have to assign the column width to
+size_t longest_month = 0; //the longest month which we have to assign the column width to
+size_t longest_hardlink = 0; //the longest hardlink which we have to assign the column width to
+unsigned int blocks; //the total block size in 1024 bytes
 
-int getcurrent_year(){
+int getcurrent_year(){	//function to get the current year function usage: (if last modification time is not in the current year display the year)
 	time_t year = time(&year);
 	struct tm *current_time = localtime(&year);
 	int current_year = current_time->tm_year + 1900;
@@ -43,7 +43,7 @@ int getcurrent_year(){
 
 }
 
-char *get_file_type(mode_t st_mode){
+char *get_file_type(mode_t st_mode){ 
 	if(st_mode & S_ISUID && S_ISREG(st_mode)){
 		return ANSI_BACKGROUND_RED;
 	}
@@ -112,30 +112,30 @@ char *populate_permission(mode_t st_mode,char *file_type){
 	return permission;
 }
 
-struct file *populate_struct(struct dirent *dir_struct,DIR *dir,char *directory){ 
+struct file *populate_struct(struct dirent *dir_struct,DIR *dir,char *directory){  //populate the struct for each file
 	int i = 0;
 	struct file *new_ptr = NULL; //new ptr to store potential realloc return value
 	struct file *file_properties;
 	struct file *final_arr;
 	struct stat file_stats;
 	int word_limit = 256; //the amount of words that we can store in the struct array
-	size_t struct_buf = sizeof(struct file);
+	size_t struct_buf = sizeof(struct file); //memory size for the struct array
 	file_properties = malloc(struct_buf * word_limit);
 	struct_buf = sizeof(struct file) * word_limit;
 	blocks = 0;
 	while((dir_struct = readdir(dir)) != NULL){
 		char *file_name = dir_struct->d_name;
 		char file_dir[(sizeof(char *) * strlen(directory)) + 3 + (sizeof(char *) * strlen(file_name))];
-		strncpy(file_dir, directory,strlen(directory)+1);
-		strcat(file_dir,"/");
-		strcat(file_dir,file_name);
-		if(lstat(file_dir, &file_stats) == -1){
+		strncpy(file_dir, directory,strlen(directory)+1); //copy the directory name to the file_dir var
+		strcat(file_dir,"/"); //add the "/" to the end of the directory "/var" -> "/var/"
+		strcat(file_dir,file_name); //add the current file_name to the directory "/var/" -> "/var/current_file"
+		if(lstat(file_dir, &file_stats) == -1){ //error handling for lstat
 			perror("lstat");
 		}
-		if(strlen(file_name) > longest_filename){
+		if(strlen(file_name) > longest_filename){ //find the longest filename
 			longest_filename = strlen(file_name);
 		}
-		if (i >= word_limit){
+		if (i >= word_limit){ //dynamically allocate memory for the struct array
 			if (struct_buf >= UPPER_SIZE){
 				printf("Reached maxium amount of memory allowed\nexiting...");
 				exit(-1);
@@ -234,7 +234,7 @@ struct file *populate_struct(struct dirent *dir_struct,DIR *dir,char *directory)
 	return final_arr;
 }
 
-void free_struct_mem(struct file *file_properties,int len){
+void free_struct_mem(struct file *file_properties,int len){ //recursively free memory allocated for each struct array's child
 	int i;
 	for(i=0;i<len;i++){
 		free(file_properties[i].name);
@@ -263,10 +263,10 @@ char *parse_args(int argc,char *argv[]){
 	return args;
 }
 
-struct file* sort_name(struct file *file_properties){
+struct file* sort_name(struct file *file_properties){ //sort the name alphabetically (.) and (..) are first
 	int i;
 	int j;
-	for(j=0;j<actual_number_files;j++){
+	for(j=0;j<actual_number_files;j++){ //bubble sort
 		struct file tmp;
 		for(i=0;i<actual_number_files - j - 1;i++){
 			if(strcmp(file_properties[i].name,file_properties[i+1].name) > 0){
@@ -395,7 +395,7 @@ int main(int argc, char*argv[]){
 	}
 	if(isatty(1)){
 		struct winsize sizes;
-		int status = ioctl(1, TIOCGWINSZ, &sizes);
+		int status = ioctl(1, TIOCGWINSZ, &sizes);//we assume that the program is ran inside a terminal
 		if(status == 0){
 			col_size = sizes.ws_col;
 	}
